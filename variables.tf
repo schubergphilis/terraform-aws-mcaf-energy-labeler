@@ -153,6 +153,5 @@ variable "labeler_cron_expression" {
 
 variable "image_uri" {
   type        = string
-  description = "The URI of the aws labeler lambda docker image"
-  default     = "ghcr.io/schubergphilis/awsenergylabeler:main-lambda"
+  description = "The URI of the aws labeler lambda docker image. Needs to be an ECR image"
 }
