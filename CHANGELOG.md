@@ -12,4 +12,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### 🐛 Bug Fixes
 
 - bug: up the github minimum provider version, the current minimum version is not compatible with the current codebase (#52) @marwinbaumannsbp
-
