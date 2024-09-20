@@ -3,7 +3,9 @@ data "aws_caller_identity" "default" {}
 data "aws_region" "default" {}
 
 module "kms_key" {
-  source      = "github.com/schubergphilis/terraform-aws-mcaf-kms?ref=v0.2.0"
+  source  = "schubergphilis/mcaf-kms/aws"
+  version = "0.3.0"
+
   name        = "aws-energy-labeler-logs"
   description = "KMS key used for encrypting flow logs from the aws-energy-labeler"
   policy      = data.aws_iam_policy_document.kms_key_policy.json
