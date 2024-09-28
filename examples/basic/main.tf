@@ -1,3 +1,14 @@
+terraform {
+  required_version = ">= 1.3"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 4.39.0"
+    }
+  }
+}
+
 provider "aws" {
   region = "eu-west-1"
 }
@@ -5,11 +16,10 @@ provider "aws" {
 module "aws-energy-labeler" {
   source = "../../"
 
-  image_uri   = "123456789012.dkr.ecr.eu-west-1.amazonaws.com/energy-labeler:latest"
-  kms_key_arn = module.kms_key.arn
+  image_uri = "123456789012.dkr.ecr.eu-west-1.amazonaws.com/energy-labeler:latest"
 
   config = {
-    export-path             = "s3://bucket-name/folder/"
-    organizations-zone-name = "SOMETHING"
+    export_path             = "s3://bucket_name/folder/"
+    organizations_zone_name = "MYZONE"
   }
 }
