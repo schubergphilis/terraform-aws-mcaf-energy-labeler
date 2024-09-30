@@ -1,71 +1,69 @@
 # terraform-aws-mcaf-energy-labeler
 
-MCAF Terraform module to create a lambda function that periodically generates an AWS energy label based on [awsenergylabelerlib](https://github.com/schubergphilis/awsenergylabelerlib)
+Terraform module to create an ECS scheduled task that periodically generates an AWS energy label based on [awsenergylabelerlib](https://github.com/schubergphilis/awsenergylabelerlib).
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.20 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.64.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.20 |
 
 ## Modules
 
-No modules.
+| Name | Source | Version |
+|------|--------|---------|
+| <a name="module_aws_ecs_container_definition"></a> [aws\_ecs\_container\_definition](#module\_aws\_ecs\_container\_definition) | terraform-aws-modules/ecs/aws//modules/container-definition | ~> 5.11.4 |
+| <a name="module_iam_role"></a> [iam\_role](#module\_iam\_role) | schubergphilis/mcaf-role/aws | ~> 0.4.0 |
+| <a name="module_s3"></a> [s3](#module\_s3) | schubergphilis/mcaf-s3/aws | ~> 0.14.1 |
 
 ## Resources
 
 | Name | Type |
 |------|------|
 | [aws_cloudwatch_event_rule.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_rule) | resource |
-| [aws_cloudwatch_event_target.lambda_target](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target) | resource |
-| [aws_cloudwatch_log_group.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
-| [aws_iam_policy.policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
-| [aws_iam_role.role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
-| [aws_iam_role_policy_attachment.custom](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
-| [aws_iam_role_policy_attachment.lambda](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
-| [aws_lambda_function.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function) | resource |
-| [aws_lambda_permission.allow_events](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
+| [aws_cloudwatch_event_target.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target) | resource |
+| [aws_ecs_cluster.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_cluster) | resource |
+| [aws_ecs_task_definition.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_task_definition) | resource |
 | [aws_security_group.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
 | [aws_vpc_security_group_egress_rule.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule) | resource |
-| [aws_iam_policy_document.policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_ecs_cluster.selected](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ecs_cluster) | data source |
+| [aws_iam_policy_document.ecs_task](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
+| [aws_s3_bucket.selected](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/s3_bucket) | data source |
 | [aws_subnet.selected](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnet) | data source |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_image_uri"></a> [image\_uri](#input\_image\_uri) | The URI of the aws labeler lambda docker image. Needs to be an ECR image | `string` | n/a | yes |
-| <a name="input_architecture"></a> [architecture](#input\_architecture) | Instruction set architecture of the Lambda function | `string` | `"arm64"` | no |
-| <a name="input_cloudwatch_logs"></a> [cloudwatch\_logs](#input\_cloudwatch\_logs) | Whether or not to configure a CloudWatch log group | `bool` | `true` | no |
-| <a name="input_description"></a> [description](#input\_description) | A description of the lambda | `string` | `"Lambda function for the AWS Energy Labeler"` | no |
-| <a name="input_environment"></a> [environment](#input\_environment) | The environment variables to set | `map(string)` | <pre>{<br>  "log_level": "DEBUG"<br>}</pre> | no |
-| <a name="input_kms_key_arn"></a> [kms\_key\_arn](#input\_kms\_key\_arn) | The ARN of the KMS key used to encrypt the cloudwatch log group and environment variables | `string` | `null` | no |
-| <a name="input_labeler_config"></a> [labeler\_config](#input\_labeler\_config) | A map containing all labeler configuration options | <pre>object({<br>    log-level                   = optional(string)<br>    region                      = optional(string)<br>    organizations-zone-name     = optional(string)<br>    audit-zone-name             = optional(string)<br>    single-account-id           = optional(string)<br>    frameworks                  = optional(list(string), [])<br>    allowed-account-ids         = optional(list(string), [])<br>    denied-account-ids          = optional(list(string), [])<br>    allowed-regions             = optional(list(string), [])<br>    denied-regions              = optional(list(string), [])<br>    export-path                 = optional(string)<br>    export-metrics-only         = optional(bool, false)<br>    to-json                     = optional(bool, false)<br>    report-closed-findings-days = optional(number)<br>    report-suppressed-findings  = optional(bool, false)<br>    account-thresholds          = optional(string)<br>    zone-thresholds             = optional(string)<br>    security-hub-query-filter   = optional(string)<br>    validate-metadata-file      = optional(string)<br>  })</pre> | `{}` | no |
-| <a name="input_labeler_cron_expression"></a> [labeler\_cron\_expression](#input\_labeler\_cron\_expression) | The cron expression to be used for triggering the labeler | `string` | `"cron(0 13 ? * SUN *)"` | no |
-| <a name="input_log_retention"></a> [log\_retention](#input\_log\_retention) | Number of days to retain log events in the specified log group | `number` | `365` | no |
-| <a name="input_memory_size"></a> [memory\_size](#input\_memory\_size) | The memory size of the lambda | `number` | `512` | no |
-| <a name="input_name"></a> [name](#input\_name) | The name of the lambda | `string` | `"aws-energy-labeler"` | no |
-| <a name="input_permissions_boundary"></a> [permissions\_boundary](#input\_permissions\_boundary) | The permissions boundary to set on the role | `string` | `null` | no |
+| <a name="input_bucket_name"></a> [bucket\_name](#input\_bucket\_name) | The name of the bucket to store the exported findings (will be created if not specified) | `string` | `null` | no |
+| <a name="input_bucket_prefix"></a> [bucket\_prefix](#input\_bucket\_prefix) | The prefix to use for the bucket | `string` | `"/"` | no |
+| <a name="input_cluster_arn"></a> [cluster\_arn](#input\_cluster\_arn) | ARN of an existing ECS cluster, if not provided a new one will be created | `string` | `null` | no |
+| <a name="input_config"></a> [config](#input\_config) | Map containing labeler configuration options | <pre>object({<br>    account_thresholds          = optional(string)<br>    allowed_account_ids         = optional(list(string), [])<br>    allowed_regions             = optional(list(string), [])<br>    audit_zone_name             = optional(string)<br>    denied_account_ids          = optional(list(string), [])<br>    denied_regions              = optional(list(string), [])<br>    export_metrics_only         = optional(bool, false)<br>    frameworks                  = optional(list(string), [])<br>    log_level                   = optional(string)<br>    organizations_zone_name     = optional(string)<br>    region                      = optional(string)<br>    report_closed_findings_days = optional(number)<br>    report_suppressed_findings  = optional(bool, false)<br>    security_hub_query_filter   = optional(string)<br>    single_account_id           = optional(string)<br>    to_json                     = optional(bool, false)<br>    validate_metadata_file      = optional(string)<br>    zone_thresholds             = optional(string)<br>  })</pre> | `{}` | no |
+| <a name="input_iam_permissions_boundary"></a> [iam\_permissions\_boundary](#input\_iam\_permissions\_boundary) | The permissions boundary to attach to the IAM role | `string` | `null` | no |
+| <a name="input_iam_role_path"></a> [iam\_role\_path](#input\_iam\_role\_path) | The path for the IAM role | `string` | `"/"` | no |
+| <a name="input_image_uri"></a> [image\_uri](#input\_image\_uri) | The URI of the container image to use | `string` | `"ghcr.io/schubergphilis/awsenergylabeler:main"` | no |
+| <a name="input_kms_key_arn"></a> [kms\_key\_arn](#input\_kms\_key\_arn) | The ARN of the KMS key to use for encryption | `string` | `null` | no |
+| <a name="input_memory"></a> [memory](#input\_memory) | The memory size of the task | `number` | `512` | no |
+| <a name="input_name"></a> [name](#input\_name) | Name prefix of labeler resources | `string` | `"aws-energy-labeler"` | no |
+| <a name="input_schedule_expression"></a> [schedule\_expression](#input\_schedule\_expression) | The cron expression to be used for triggering the labeler | `string` | `"cron(0 13 ? * SUN *)"` | no |
 | <a name="input_security_group_egress_rules"></a> [security\_group\_egress\_rules](#input\_security\_group\_egress\_rules) | Security Group egress rules | <pre>list(object({<br>    cidr_ipv4                    = optional(string)<br>    cidr_ipv6                    = optional(string)<br>    description                  = string<br>    from_port                    = optional(number, 0)<br>    ip_protocol                  = optional(string, "-1")<br>    prefix_list_id               = optional(string)<br>    referenced_security_group_id = optional(string)<br>    to_port                      = optional(number, 0)<br>  }))</pre> | <pre>[<br>  {<br>    "cidr_ipv4": "0.0.0.0/0",<br>    "description": "Allow outgoing HTTPS traffic for the labeler to work",<br>    "from_port": 443,<br>    "ip_protocol": "tcp",<br>    "to_port": 443<br>  }<br>]</pre> | no |
-| <a name="input_security_group_name_prefix"></a> [security\_group\_name\_prefix](#input\_security\_group\_name\_prefix) | An optional prefix to create a unique name of the security group. If not provided `var.name` will be used | `string` | `null` | no |
-| <a name="input_subnet_ids"></a> [subnet\_ids](#input\_subnet\_ids) | The subnet ids where this lambda needs to run | `list(string)` | `null` | no |
+| <a name="input_subnet_ids"></a> [subnet\_ids](#input\_subnet\_ids) | VPC subnet ids this lambda runs from | `list(string)` | `null` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | A mapping of tags to assign | `map(string)` | `{}` | no |
-| <a name="input_timeout"></a> [timeout](#input\_timeout) | The timeout of the lambda | `number` | `900` | no |
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
-| <a name="output_lambda_iam_role_arn"></a> [lambda\_iam\_role\_arn](#output\_lambda\_iam\_role\_arn) | n/a |
+| <a name="output_task_role_arn"></a> [task\_role\_arn](#output\_task\_role\_arn) | value of the task role arn |
 <!-- END_TF_DOCS -->
 
 ## License

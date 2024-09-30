@@ -1,125 +1,54 @@
 locals {
-  execution_type = var.subnet_ids == null ? "Basic" : "VPCAccess"
-  vpc_config     = var.subnet_ids != null ? { create : true } : {}
-  environment    = var.environment != null ? { create : true } : {}
-  labeler_config_list_values = {
-    frameworks          = join(",", var.labeler_config["frameworks"])
-    allowed-account-ids = join(",", var.labeler_config["allowed-account-ids"])
-    denied-account-ids  = join(",", var.labeler_config["denied-account-ids"])
-    allowed-regions     = join(",", var.labeler_config["allowed-regions"])
-    denied-regions      = join(",", var.labeler_config["denied-regions"])
-  }
-  labeler_config_merged = merge(var.labeler_config, local.labeler_config_list_values)
-  labeler_config_list_values_non_null = {
-    for k, v in local.labeler_config_merged : k => v if v != null && v != ""
-  }
-  labeler_config_processed = merge({ region = data.aws_region.current.name, disable-banner = true, disable-spinner = true }, local.labeler_config_list_values_non_null)
-  s3_export_target         = try(strcontains(var.labeler_config["export-path"], "s3://"), false) ? { create : true } : {}
-  single_account_id        = can(local.labeler_config_processed["single-account-id"]) ? { create : true } : {}
-  not_single_account_id    = anytrue([can(local.labeler_config_processed["organizations-zone-name"]), can(local.labeler_config_processed["audit-zone-name"])]) ? { create : true } : {}
-}
+  // Validate bucket and ECS cluster resources exist if specified, otherwise create them
+  bucket_name             = var.bucket_name != null ? data.aws_s3_bucket.selected[0].id : module.s3[0].id
+  bucket_name_with_prefix = format("%s%s", local.bucket_name, var.bucket_prefix)
+  cluster_arn             = var.cluster_arn != null ? data.aws_ecs_cluster.selected[0].arn : aws_ecs_cluster.default[0].arn
+  iam_name_prefix         = replace(title(var.name), "/[-_]/", "")
 
-data "aws_region" "current" {}
+  // Sanitize the ECS task environment variables
+  config = merge(
+    var.config,
+    {
+      allowed_account_ids = length(var.config.allowed_account_ids) > 0 ? join(", ", var.config.allowed_account_ids) : null
+      allowed_regions     = length(var.config.allowed_regions) > 0 ? join(", ", var.config.allowed_regions) : null
+      denied_account_ids  = length(var.config.denied_account_ids) > 0 ? join(", ", var.config.denied_account_ids) : null
+      denied_regions      = length(var.config.denied_regions) > 0 ? join(", ", var.config.denied_regions) : null
+      disable_banner      = true
+      disable_spinner     = true
+      export_path         = "s3://${local.bucket_name_with_prefix}"
+      frameworks          = length(var.config.frameworks) > 0 ? join(", ", var.config.frameworks) : null
+      region              = var.config.region != null ? var.config.region : data.aws_region.current.name
+    }
+  )
 
-resource "aws_iam_role" "role" {
-  name = "${var.name}-lambda-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        },
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-  permissions_boundary = try(var.permissions_boundary, null)
-}
-
-
-data "aws_iam_policy_document" "policy" {
-  dynamic "statement" {
-    for_each = local.s3_export_target
-
-    content {
-      effect  = "Allow"
-      actions = ["s3:PutObject*"]
-      resources = [
-        "arn:aws:s3:::${trimprefix(var.labeler_config["export-path"], "s3://")}*",
-        "arn:aws:s3:::${trimprefix(var.labeler_config["export-path"], "s3://")}"
-      ]
+  // IAM roles to create
+  roles = {
+    "task" = {
+      name          = "${local.iam_name_prefix}EcsTask"
+      create_policy = true
+      role_policy   = data.aws_iam_policy_document.ecs_task.json
+    }
+    "task_events" = {
+      name        = "${local.iam_name_prefix}EcsEvents"
+      policy_arns = ["arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceEventsRole"]
+    }
+    "task_execution" = {
+      name        = "${local.iam_name_prefix}EcsTaskExecution"
+      policy_arns = ["arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"]
     }
   }
-
-  dynamic "statement" {
-    for_each = local.single_account_id
-
-    content {
-      effect = "Allow"
-      actions = [
-        "iam:ListAccountAliases",
-        "ec2:DescribeRegions",
-        "securityhub:ListFindingAggregators",
-        "securityhub:GetFindings",
-        "securityhub:ListEnabledProductsForImport"
-      ]
-      resources = ["*"]
-    }
-  }
-
-  dynamic "statement" {
-    for_each = local.not_single_account_id
-
-    content {
-      effect = "Allow"
-      actions = [
-        "organizations:DescribeOrganization",
-        "organizations:ListAccounts",
-        "organizations:DescribeAccount",
-        "iam:ListAccountAliases",
-        "ec2:DescribeRegions",
-        "securityhub:ListFindingAggregators",
-        "securityhub:GetFindings",
-        "securityhub:ListEnabledProductsForImport"
-      ]
-      resources = ["*"]
-    }
-  }
-
 }
 
-resource "aws_iam_role_policy_attachment" "lambda" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambda${local.execution_type}ExecutionRole"
-  role       = aws_iam_role.role.name
+data "aws_ecs_cluster" "selected" {
+  count = var.cluster_arn != null ? 1 : 0
+
+  cluster_name = var.cluster_arn
 }
 
-resource "aws_iam_policy" "policy" {
-  name   = "${var.name}-lambda-policy"
-  policy = data.aws_iam_policy_document.policy.json
-}
+data "aws_s3_bucket" "selected" {
+  count = var.bucket_name != null ? 1 : 0
 
-resource "aws_iam_role_policy_attachment" "custom" {
-  policy_arn = aws_iam_policy.policy.arn
-  role       = aws_iam_role.role.name
-}
-
-resource "aws_lambda_permission" "allow_events" {
-  statement_id  = "AllowExecutionFromEventBridge"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.default.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.default.arn
-}
-
-resource "aws_cloudwatch_log_group" "default" {
-  count = var.cloudwatch_logs ? 1 : 0
-
-  name              = "/aws/lambda/${var.name}"
-  kms_key_id        = var.kms_key_arn
-  retention_in_days = var.log_retention
-  tags              = var.tags
+  bucket = var.bucket_name
 }
 
 data "aws_subnet" "selected" {
@@ -128,13 +57,15 @@ data "aws_subnet" "selected" {
   id = var.subnet_ids[0]
 }
 
+data "aws_region" "current" {}
+
 resource "aws_security_group" "default" {
-  #checkov:skip=CKV2_AWS_5: False positive finding, the security group is attached.
+  # checkov:skip=CKV2_AWS_5: False positive finding, the security group is attached.
+
   count = var.subnet_ids != null ? 1 : 0
 
-  name        = var.security_group_name_prefix == null ? var.name : null
-  name_prefix = var.security_group_name_prefix != null ? var.security_group_name_prefix : null
-  description = "Security group for lambda ${var.name}"
+  name        = var.name
+  description = "Security group for ECS cluster ${var.name}"
   vpc_id      = data.aws_subnet.selected[0].vpc_id
   tags        = var.tags
 
@@ -144,7 +75,7 @@ resource "aws_security_group" "default" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "default" {
-  for_each = var.subnet_ids != null && length(var.security_group_egress_rules) != 0 ? { for v in var.security_group_egress_rules : v.description => v } : {}
+  for_each = var.subnet_ids != null ? { for v in var.security_group_egress_rules : v.description => v } : {}
 
   cidr_ipv4                    = each.value.cidr_ipv4
   cidr_ipv6                    = each.value.cidr_ipv6
@@ -157,52 +88,149 @@ resource "aws_vpc_security_group_egress_rule" "default" {
   to_port                      = each.value.to_port
 }
 
-// tfsec:ignore:aws-lambda-enable-tracing
-resource "aws_lambda_function" "default" {
-  #checkov:skip=CKV_AWS_50: "AWS Lambda functions with tracing not enabled - We are not using X-Ray
-  #checkov:skip=CKV_AWS_116: "AWS Lambda function is not configured for a DLQ - All logging is visible in CloudWatch
-  #checkov:skip=CKV_AWS_272: "AWS Lambda function is not configured to validate code-signing - Code is developed internally and signed by the CI/CD pipeline
-  reserved_concurrent_executions = 1
-  architectures                  = [var.architecture]
-  description                    = var.description
-  function_name                  = var.name
-  kms_key_arn                    = var.environment != null ? var.kms_key_arn : null
-  image_uri                      = var.image_uri
-  memory_size                    = var.memory_size
-  role                           = aws_iam_role.role.arn
-  tags                           = var.tags
-  timeout                        = var.timeout
-  package_type                   = "Image"
+resource "aws_ecs_cluster" "default" {
+  count = var.cluster_arn == null ? 1 : 0
 
-  dynamic "environment" {
-    for_each = local.environment
+  name = var.name
+}
 
-    content {
-      variables = var.environment
-    }
+data "aws_iam_policy_document" "ecs_task" {
+  # checkov:skip=CKV_AWS_356: Cannot set limit resources for security hub or org
+
+  statement {
+    sid       = "AllowReadOrg"
+    resources = ["*"]
+
+    actions = [
+      "ec2:DescribeRegions",
+      "iam:ListAccountAliases",
+      "organizations:DescribeAccount",
+      "organizations:DescribeOrganization",
+      "organizations:ListAccounts",
+    ]
   }
 
-  dynamic "vpc_config" {
-    for_each = local.vpc_config
+  statement {
+    sid       = "AllowReadSecurityHub"
+    resources = ["*"]
 
-    content {
-      subnet_ids         = var.subnet_ids
-      security_group_ids = [aws_security_group.default[0].id]
-    }
+    actions = [
+      "securityhub:GetFindings",
+      "securityhub:ListEnabledProductsForImport",
+      "securityhub:ListFindingAggregators",
+    ]
   }
+
+  statement {
+    sid       = "AllowPutS3"
+    actions   = ["s3:PutObject*"]
+    resources = ["arn:aws:s3:::${local.bucket_name_with_prefix}*"]
+  }
+}
+
+module "iam_role" {
+  for_each = local.roles
+
+  source  = "schubergphilis/mcaf-role/aws"
+  version = "~> 0.4.0"
+
+  name                  = each.value.name
+  create_policy         = try(each.value.create_policy, null)
+  path                  = var.iam_role_path
+  permissions_boundary  = var.iam_permissions_boundary
+  policy_arns           = try(each.value.policy_arns, [])
+  principal_identifiers = ["ecs-tasks.amazonaws.com"]
+  principal_type        = "Service"
+  role_policy           = try(each.value.role_policy, null)
+  tags                  = var.tags
 }
 
 resource "aws_cloudwatch_event_rule" "default" {
-  name        = "${var.name}-event-rule"
-  description = "Trigger lambda with ${var.labeler_cron_expression}"
-
-  schedule_expression = var.labeler_cron_expression
+  name                = var.name
+  schedule_expression = var.schedule_expression
 }
 
-resource "aws_cloudwatch_event_target" "lambda_target" {
+resource "aws_cloudwatch_event_target" "default" {
+  target_id = var.name
+  arn       = local.cluster_arn
   rule      = aws_cloudwatch_event_rule.default.name
-  target_id = "SendToLambda"
-  arn       = aws_lambda_function.default.arn
+  role_arn  = module.iam_role["task_events"].arn
 
-  input = jsonencode(local.labeler_config_processed)
+  ecs_target {
+    launch_type         = "FARGATE"
+    task_count          = 1
+    task_definition_arn = aws_ecs_task_definition.default.arn
+    platform_version    = "1.4.0"
+
+    network_configuration {
+      assign_public_ip = false
+      security_groups  = [aws_security_group.default[0].id]
+      subnets          = var.subnet_ids
+    }
+  }
+}
+
+module "aws_ecs_container_definition" {
+  source  = "terraform-aws-modules/ecs/aws//modules/container-definition"
+  version = "~> 5.11.4"
+
+  name                            = var.name
+  cloudwatch_log_group_name       = "/aws/ecs/${var.name}"
+  create_cloudwatch_log_group     = true
+  cloudwatch_log_group_kms_key_id = var.kms_key_arn
+  essential                       = true
+  image                           = var.image_uri
+  readonly_root_filesystem        = true
+  tags                            = var.tags
+
+  environment = [
+    for key, value in local.config : {
+      name  = "AWS_LABELER_${upper(key)}",
+      value = value != null ? try(join(", ", value), tostring(value)) : null
+    }
+    if value != null
+  ]
+}
+
+resource "aws_ecs_task_definition" "default" {
+  family                   = var.name
+  container_definitions    = jsonencode([module.aws_ecs_container_definition.container_definition])
+  cpu                      = 256
+  execution_role_arn       = module.iam_role["task_execution"].arn
+  memory                   = var.memory
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  task_role_arn            = module.iam_role["task"].arn
+  tags                     = var.tags
+}
+
+module "s3" {
+  count = var.bucket_name == null ? 1 : 0
+
+  source  = "schubergphilis/mcaf-s3/aws"
+  version = "~> 0.14.1"
+
+  name_prefix = "${lower(var.name)}-"
+  versioning  = true
+  tags        = var.tags
+
+  lifecycle_rule = [
+    {
+      id      = "basic-retention-rule"
+      enabled = true
+
+      abort_incomplete_multipart_upload = {
+        days_after_initiation = 7
+      }
+
+      expiration = {
+        days = 90
+      }
+
+      transition = {
+        days          = 30
+        storage_class = "STANDARD_IA"
+      }
+    }
+  ]
 }
