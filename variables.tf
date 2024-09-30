@@ -33,32 +33,14 @@ variable "cluster_arn" {
 
 variable "config" {
   type = object({
-    account_thresholds          = optional(string)
-    allowed_account_ids         = optional(list(string), [])
-    allowed_regions             = optional(list(string), [])
-    audit_zone_name             = optional(string)
-    denied_account_ids          = optional(list(string), [])
-    denied_regions              = optional(list(string), [])
-    export_metrics_only         = optional(bool, false)
-    frameworks                  = optional(list(string), [])
-    log_level                   = optional(string)
-    organizations_zone_name     = optional(string)
-    region                      = optional(string)
-    report_closed_findings_days = optional(number)
-    report_suppressed_findings  = optional(bool, false)
-    security_hub_query_filter   = optional(string)
-    single_account_id           = optional(string)
-    to_json                     = optional(bool, false)
-    validate_metadata_file      = optional(string)
-    zone_thresholds             = optional(string)
+    allowed_account_ids        = optional(list(string), [])
+    denied_account_ids         = optional(list(string), [])
+    frameworks                 = optional(list(string), [])
+    log_level                  = optional(string)
+    report_suppressed_findings = optional(bool, false)
+    zone_name                  = string
   })
-  default     = {}
   description = "Map containing labeler configuration options"
-
-  validation {
-    condition     = length(compact([var.config.single_account_id, var.config.audit_zone_name, var.config.organizations_zone_name])) == 1
-    error_message = "Parameters organizations_zone_name, audit_zone_name and single_account_id are mutually exclusive"
-  }
 }
 
 variable "kms_key_arn" {

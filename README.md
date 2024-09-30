@@ -2,6 +2,59 @@
 
 Terraform module to create an ECS scheduled task that periodically generates an AWS energy label based on [awsenergylabelerlib](https://github.com/schubergphilis/awsenergylabelerlib).
 
+This module should be run in the AWS account that collects your aggregated Security Hub findings. In a typical Control Tower deployment, this would be the Audit account.
+
+In it's most minimal input, this module will create an S3 bucket to store the generated energy labels and a scheduled ECS task that will run every Sunday at 13:00 UTC.
+
+```hcl
+module "aws-energy-labeler" {
+  source  = "schubergphilis/mcaf-energy-labeler/aws"
+
+  kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
+
+  config = {
+    zone_name = "MYZONE"
+  }
+}
+```
+
+Should you prefer to use an existing bucket, you can specify the bucket name:
+
+```hcl
+module "aws-energy-labeler" {
+  source  = "schubergphilis/mcaf-energy-labeler/aws"
+
+  kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
+
+  config = {
+    bucket_name   = "mybucket"
+    bucket_prefix = "/myreport/"
+    zone_name     = "MYZONE"
+  }
+}
+```
+
+If you want to create multiple reports, for example with different configurations, you should also set the name to avoid colliding resource names:
+
+```hcl
+module "aws-energy-labeler" {
+  for_each = {
+    "myzone"    = { allowed_account_ids = ["123456789012"] },
+    "otherzone" = { allowed_account_ids = ["234567890123"] },
+  }
+
+  source  = "schubergphilis/mcaf-energy-labeler/aws"
+
+  name        = "aws-energy-labeler-${each.value}"
+  kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
+
+  config = {
+    allowed_account_ids = each.value.allowed_account_ids
+    zone_name           = each.key
+  }
+}
+```
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
