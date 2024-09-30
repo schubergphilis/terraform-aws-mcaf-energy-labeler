@@ -28,7 +28,7 @@ variable "bucket_prefix" {
 variable "cluster_arn" {
   type        = string
   default     = null
-  description = "ARN of an existing ECS cluster"
+  description = "ARN of an existing ECS cluster, if not provided a new one will be created"
 }
 
 variable "config" {
