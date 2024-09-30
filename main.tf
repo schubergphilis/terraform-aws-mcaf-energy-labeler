@@ -211,6 +211,7 @@ module "s3" {
   version = "~> 0.14.1"
 
   name_prefix = "${lower(var.name)}-"
+  kms_key_arn = var.kms_key_arn
   versioning  = true
   tags        = var.tags
 

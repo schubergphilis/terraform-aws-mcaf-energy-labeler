@@ -16,6 +16,8 @@ provider "aws" {
 module "aws-energy-labeler" {
   source = "../../"
 
+  kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
+
   config = {
     zone_name = "MYZONE"
   }
