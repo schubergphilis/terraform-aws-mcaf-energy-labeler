@@ -2,6 +2,59 @@
 
 Terraform module to create an ECS scheduled task that periodically generates an AWS energy label based on [awsenergylabelerlib](https://github.com/schubergphilis/awsenergylabelerlib).
 
+This module should be run in the AWS account that collects your aggregated Security Hub findings. In a typical Control Tower deployment, this would be the Audit account.
+
+In it's most minimal input, this module will create an S3 bucket to store the generated energy labels and a scheduled ECS task that will run every Sunday at 13:00 UTC.
+
+```hcl
+module "aws-energy-labeler" {
+  source  = "schubergphilis/mcaf-energy-labeler/aws"
+
+  kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
+
+  config = {
+    zone_name = "MYZONE"
+  }
+}
+```
+
+Should you prefer to use an existing bucket, you can specify the bucket name:
+
+```hcl
+module "aws-energy-labeler" {
+  source  = "schubergphilis/mcaf-energy-labeler/aws"
+
+  kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
+
+  config = {
+    bucket_name   = "mybucket"
+    bucket_prefix = "/myreport/"
+    zone_name     = "MYZONE"
+  }
+}
+```
+
+If you want to create multiple reports, for example with different configurations, you should also set the name to avoid colliding resource names:
+
+```hcl
+module "aws-energy-labeler" {
+  for_each = {
+    "myzone"    = { allowed_account_ids = ["123456789012"] },
+    "otherzone" = { allowed_account_ids = ["234567890123"] },
+  }
+
+  source  = "schubergphilis/mcaf-energy-labeler/aws"
+
+  name        = "aws-energy-labeler-${each.value}"
+  kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
+
+  config = {
+    allowed_account_ids = each.value.allowed_account_ids
+    zone_name           = each.key
+  }
+}
+```
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -44,10 +97,10 @@ Terraform module to create an ECS scheduled task that periodically generates an 
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_config"></a> [config](#input\_config) | Map containing labeler configuration options | <pre>object({<br>    allowed_account_ids        = optional(list(string), [])<br>    denied_account_ids         = optional(list(string), [])<br>    frameworks                 = optional(list(string), [])<br>    log_level                  = optional(string)<br>    report_suppressed_findings = optional(bool, false)<br>    zone_name                  = string<br>  })</pre> | n/a | yes |
 | <a name="input_bucket_name"></a> [bucket\_name](#input\_bucket\_name) | The name of the bucket to store the exported findings (will be created if not specified) | `string` | `null` | no |
 | <a name="input_bucket_prefix"></a> [bucket\_prefix](#input\_bucket\_prefix) | The prefix to use for the bucket | `string` | `"/"` | no |
 | <a name="input_cluster_arn"></a> [cluster\_arn](#input\_cluster\_arn) | ARN of an existing ECS cluster, if not provided a new one will be created | `string` | `null` | no |
-| <a name="input_config"></a> [config](#input\_config) | Map containing labeler configuration options | <pre>object({<br>    account_thresholds          = optional(string)<br>    allowed_account_ids         = optional(list(string), [])<br>    allowed_regions             = optional(list(string), [])<br>    audit_zone_name             = optional(string)<br>    denied_account_ids          = optional(list(string), [])<br>    denied_regions              = optional(list(string), [])<br>    export_metrics_only         = optional(bool, false)<br>    frameworks                  = optional(list(string), [])<br>    log_level                   = optional(string)<br>    organizations_zone_name     = optional(string)<br>    region                      = optional(string)<br>    report_closed_findings_days = optional(number)<br>    report_suppressed_findings  = optional(bool, false)<br>    security_hub_query_filter   = optional(string)<br>    single_account_id           = optional(string)<br>    to_json                     = optional(bool, false)<br>    validate_metadata_file      = optional(string)<br>    zone_thresholds             = optional(string)<br>  })</pre> | `{}` | no |
 | <a name="input_iam_permissions_boundary"></a> [iam\_permissions\_boundary](#input\_iam\_permissions\_boundary) | The permissions boundary to attach to the IAM role | `string` | `null` | no |
 | <a name="input_iam_role_path"></a> [iam\_role\_path](#input\_iam\_role\_path) | The path for the IAM role | `string` | `"/"` | no |
 | <a name="input_image_uri"></a> [image\_uri](#input\_image\_uri) | The URI of the container image to use | `string` | `"ghcr.io/schubergphilis/awsenergylabeler:main"` | no |

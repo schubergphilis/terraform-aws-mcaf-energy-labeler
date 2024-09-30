@@ -9,15 +9,15 @@ locals {
   config = merge(
     var.config,
     {
-      allowed_account_ids = length(var.config.allowed_account_ids) > 0 ? join(", ", var.config.allowed_account_ids) : null
-      allowed_regions     = length(var.config.allowed_regions) > 0 ? join(", ", var.config.allowed_regions) : null
-      denied_account_ids  = length(var.config.denied_account_ids) > 0 ? join(", ", var.config.denied_account_ids) : null
-      denied_regions      = length(var.config.denied_regions) > 0 ? join(", ", var.config.denied_regions) : null
-      disable_banner      = true
-      disable_spinner     = true
-      export_path         = "s3://${local.bucket_name_with_prefix}"
-      frameworks          = length(var.config.frameworks) > 0 ? join(", ", var.config.frameworks) : null
-      region              = var.config.region != null ? var.config.region : data.aws_region.current.name
+      allowed_account_ids     = length(var.config.allowed_account_ids) > 0 ? join(", ", var.config.allowed_account_ids) : null
+      denied_account_ids      = length(var.config.denied_account_ids) > 0 ? join(", ", var.config.denied_account_ids) : null
+      disable_banner          = true
+      disable_spinner         = true
+      export_metrics_only     = true
+      export_path             = "s3://${local.bucket_name_with_prefix}"
+      frameworks              = length(var.config.frameworks) > 0 ? join(", ", var.config.frameworks) : null
+      organizations_zone_name = var.config.zone_name
+      region                  = data.aws_region.current.name
     }
   )
 
