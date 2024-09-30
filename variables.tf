@@ -28,7 +28,7 @@ variable "bucket_prefix" {
 variable "cluster_arn" {
   type        = string
   default     = null
-  description = "ARN of an existing ECS cluster, if not provided a new one will be created"
+  description = "ARN of an existing ECS cluster, if left empty a new cluster will be created"
 }
 
 variable "config" {
@@ -45,7 +45,6 @@ variable "config" {
 
 variable "kms_key_arn" {
   type        = string
-  default     = null
   description = "The ARN of the KMS key to use for encryption"
 }
 
