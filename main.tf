@@ -162,10 +162,14 @@ resource "aws_cloudwatch_event_target" "default" {
     task_definition_arn = aws_ecs_task_definition.default.arn
     platform_version    = "1.4.0"
 
-    network_configuration {
-      assign_public_ip = false
-      security_groups  = [aws_security_group.default[0].id]
-      subnets          = var.subnet_ids
+    dynamic "network_configuration" {
+      for_each = var.subnet_ids != null ? { create : true } : {}
+
+      content {
+        assign_public_ip = false
+        security_groups  = [aws_security_group.default[0].id]
+        subnets          = var.subnet_ids
+      }
     }
   }
 }
