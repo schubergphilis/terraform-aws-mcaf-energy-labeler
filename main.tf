@@ -1,6 +1,6 @@
 locals {
   // Validate bucket and ECS cluster resources exist if specified, otherwise create them
-  bucket_name             = var.bucket_name != null ? data.aws_s3_bucket.selected[0].id : module.s3[0].id
+  bucket_name             = var.bucket_name != null ? var.bucket_name : module.s3[0].id
   bucket_name_with_prefix = format("%s%s", local.bucket_name, var.bucket_prefix)
   cluster_arn             = var.cluster_arn != null ? data.aws_ecs_cluster.selected[0].arn : aws_ecs_cluster.default[0].arn
   iam_name_prefix         = replace(title(var.name), "/[-_]/", "")
@@ -43,12 +43,6 @@ data "aws_ecs_cluster" "selected" {
   count = var.cluster_arn != null ? 1 : 0
 
   cluster_name = var.cluster_arn
-}
-
-data "aws_s3_bucket" "selected" {
-  count = var.bucket_name != null ? 1 : 0
-
-  bucket = var.bucket_name
 }
 
 data "aws_subnet" "selected" {
