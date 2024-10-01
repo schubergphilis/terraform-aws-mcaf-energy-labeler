@@ -13,6 +13,7 @@ variable "bucket_prefix" {
   type        = string
   default     = "/"
   description = "The prefix to use for the bucket"
+  nullable    = false
 
   validation {
     condition     = can(regex("^\\/", var.bucket_prefix))
