@@ -120,6 +120,22 @@ data "aws_iam_policy_document" "ecs_task" {
     actions   = ["s3:PutObject*"]
     resources = ["arn:aws:s3:::${local.bucket_name_with_prefix}*"]
   }
+
+  dynamic "statement" {
+    for_each = var.kms_key_arn != null ? { create = true } : {}
+
+    content {
+      sid       = "AllowUseKMS"
+      resources = [var.kms_key_arn]
+
+      actions = [
+        "kms:Decrypt",
+        "kms:Encrypt",
+        "kms:GenerateDataKey*",
+        "kms:ReEncrypt*",
+      ]
+    }
+  }
 }
 
 module "iam_role" {
