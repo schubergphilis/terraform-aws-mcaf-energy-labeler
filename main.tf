@@ -29,8 +29,9 @@ locals {
       role_policy   = data.aws_iam_policy_document.ecs_task.json
     }
     "task_events" = {
-      name        = "${local.iam_name_prefix}EcsEvents"
-      policy_arns = ["arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceEventsRole"]
+      name                  = "${local.iam_name_prefix}EcsEvents"
+      policy_arns           = ["arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceEventsRole"]
+      principal_identifiers = ["events.amazonaws.com"]
     }
     "task_execution" = {
       name        = "${local.iam_name_prefix}EcsTaskExecution"
@@ -149,7 +150,7 @@ module "iam_role" {
   path                  = var.iam_role_path
   permissions_boundary  = var.iam_permissions_boundary
   policy_arns           = try(each.value.policy_arns, [])
-  principal_identifiers = ["ecs-tasks.amazonaws.com"]
+  principal_identifiers = try(each.value.principal_identifiers, ["ecs-tasks.amazonaws.com"])
   principal_type        = "Service"
   role_policy           = try(each.value.role_policy, null)
   tags                  = var.tags
