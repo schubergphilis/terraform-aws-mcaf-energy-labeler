@@ -8,7 +8,7 @@ In it's most minimal input, this module will create an S3 bucket to store the ge
 
 ```hcl
 module "aws-energy-labeler" {
-  source  = "schubergphilis/mcaf-energy-labeler/aws"
+  source = "schubergphilis/mcaf-energy-labeler/aws"
 
   kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
 
@@ -18,16 +18,30 @@ module "aws-energy-labeler" {
 }
 ```
 
-Should you prefer to use an existing bucket, you can specify the bucket name:
+Or to target a single account:
 
 ```hcl
 module "aws-energy-labeler" {
-  source  = "schubergphilis/mcaf-energy-labeler/aws"
+  source = "schubergphilis/mcaf-energy-labeler/aws"
 
   kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
 
   config = {
-    zone_name     = "MYZONE"
+    single_account_id = "123456789012"
+  }
+}
+```
+
+Should you prefer to use an existing bucket, you can specify the bucket name:
+
+```hcl
+module "aws-energy-labeler" {
+  source = "schubergphilis/mcaf-energy-labeler/aws"
+
+  kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
+
+  config = {
+    zone_name = "MYZONE"
   }
 
   bucket_name   = "mybucket"
@@ -44,7 +58,7 @@ module "aws-energy-labeler" {
     "otherzone" = { allowed_account_ids = ["234567890123"] },
   }
 
-  source  = "schubergphilis/mcaf-energy-labeler/aws"
+  source = "schubergphilis/mcaf-energy-labeler/aws"
 
   name        = "aws-energy-labeler-${each.value}"
   kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
