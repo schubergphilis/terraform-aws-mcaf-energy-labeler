@@ -18,6 +18,7 @@ locals {
       frameworks              = length(var.config.frameworks) > 0 ? join(", ", var.config.frameworks) : null
       organizations_zone_name = var.config.zone_name
       region                  = data.aws_region.current.name
+      single_account_id       = var.config.single_account_id
     }
   )
 
