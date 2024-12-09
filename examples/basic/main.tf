@@ -9,11 +9,19 @@ terraform {
   }
 }
 
-provider "aws" {
-  region = "eu-west-1"
+provider "aws" {}
+
+module "aws-energy-labeler-single-account" {
+  source = "../../"
+
+  kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
+
+  config = {
+    single_account_id = "123456789012"
+  }
 }
 
-module "aws-energy-labeler" {
+module "aws-energy-labeler-zone" {
   source = "../../"
 
   kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"

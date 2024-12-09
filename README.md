@@ -8,7 +8,7 @@ In it's most minimal input, this module will create an S3 bucket to store the ge
 
 ```hcl
 module "aws-energy-labeler" {
-  source  = "schubergphilis/mcaf-energy-labeler/aws"
+  source = "schubergphilis/mcaf-energy-labeler/aws"
 
   kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
 
@@ -18,16 +18,30 @@ module "aws-energy-labeler" {
 }
 ```
 
-Should you prefer to use an existing bucket, you can specify the bucket name:
+Or to target a single account:
 
 ```hcl
 module "aws-energy-labeler" {
-  source  = "schubergphilis/mcaf-energy-labeler/aws"
+  source = "schubergphilis/mcaf-energy-labeler/aws"
 
   kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
 
   config = {
-    zone_name     = "MYZONE"
+    single_account_id = "123456789012"
+  }
+}
+```
+
+Should you prefer to use an existing bucket, you can specify the bucket name:
+
+```hcl
+module "aws-energy-labeler" {
+  source = "schubergphilis/mcaf-energy-labeler/aws"
+
+  kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
+
+  config = {
+    zone_name = "MYZONE"
   }
 
   bucket_name   = "mybucket"
@@ -44,7 +58,7 @@ module "aws-energy-labeler" {
     "otherzone" = { allowed_account_ids = ["234567890123"] },
   }
 
-  source  = "schubergphilis/mcaf-energy-labeler/aws"
+  source = "schubergphilis/mcaf-energy-labeler/aws"
 
   name        = "aws-energy-labeler-${each.value}"
   kms_key_arn = "arn:aws:kms:eu-west-1:123456789012:key/1234abcd-12ab-34cd-56ef-123456789012"
@@ -97,7 +111,7 @@ module "aws-energy-labeler" {
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_config"></a> [config](#input\_config) | Map containing labeler configuration options | <pre>object({<br>    allowed_account_ids        = optional(list(string), [])<br>    denied_account_ids         = optional(list(string), [])<br>    frameworks                 = optional(list(string), [])<br>    log_level                  = optional(string)<br>    report_suppressed_findings = optional(bool, false)<br>    zone_name                  = string<br>  })</pre> | n/a | yes |
+| <a name="input_config"></a> [config](#input\_config) | Map containing labeler configuration options | <pre>object({<br>    allowed_account_ids        = optional(list(string), [])<br>    denied_account_ids         = optional(list(string), [])<br>    frameworks                 = optional(list(string), [])<br>    log_level                  = optional(string)<br>    report_suppressed_findings = optional(bool, false)<br>    single_account_id          = optional(string)<br>    zone_name                  = optional(string)<br>  })</pre> | n/a | yes |
 | <a name="input_kms_key_arn"></a> [kms\_key\_arn](#input\_kms\_key\_arn) | The ARN of the KMS key to use for encryption | `string` | n/a | yes |
 | <a name="input_bucket_name"></a> [bucket\_name](#input\_bucket\_name) | The name of the bucket to store the exported findings (will be created if not specified) | `string` | `null` | no |
 | <a name="input_bucket_prefix"></a> [bucket\_prefix](#input\_bucket\_prefix) | The prefix to use for the bucket | `string` | `"/"` | no |
