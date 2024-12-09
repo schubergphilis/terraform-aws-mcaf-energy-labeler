@@ -111,7 +111,7 @@ module "aws-energy-labeler" {
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_config"></a> [config](#input\_config) | Map containing labeler configuration options | <pre>object({<br>    allowed_account_ids        = optional(list(string), [])<br>    denied_account_ids         = optional(list(string), [])<br>    frameworks                 = optional(list(string), [])<br>    log_level                  = optional(string)<br>    report_suppressed_findings = optional(bool, false)<br>    zone_name                  = string<br>  })</pre> | n/a | yes |
+| <a name="input_config"></a> [config](#input\_config) | Map containing labeler configuration options | <pre>object({<br>    allowed_account_ids        = optional(list(string), [])<br>    denied_account_ids         = optional(list(string), [])<br>    frameworks                 = optional(list(string), [])<br>    log_level                  = optional(string)<br>    report_suppressed_findings = optional(bool, false)<br>    single_account_id          = optional(string)<br>    zone_name                  = optional(string)<br>  })</pre> | n/a | yes |
 | <a name="input_kms_key_arn"></a> [kms\_key\_arn](#input\_kms\_key\_arn) | The ARN of the KMS key to use for encryption | `string` | n/a | yes |
 | <a name="input_bucket_name"></a> [bucket\_name](#input\_bucket\_name) | The name of the bucket to store the exported findings (will be created if not specified) | `string` | `null` | no |
 | <a name="input_bucket_prefix"></a> [bucket\_prefix](#input\_bucket\_prefix) | The prefix to use for the bucket | `string` | `"/"` | no |
