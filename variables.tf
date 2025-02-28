@@ -35,7 +35,9 @@ variable "cluster_arn" {
 variable "config" {
   type = object({
     allowed_account_ids        = optional(list(string), [])
+    allowed_regions            = optional(list(string), [])
     denied_account_ids         = optional(list(string), [])
+    denied_regions             = optional(list(string), [])
     frameworks                 = optional(list(string), [])
     log_level                  = optional(string)
     report_suppressed_findings = optional(bool, false)
@@ -47,6 +49,16 @@ variable "config" {
   validation {
     condition     = var.config.zone_name != "" || var.config.single_account_id != ""
     error_message = "Either zone_name or single_account_id is required"
+  }
+
+  validation {
+    condition     = length(var.config.allowed_account_ids) == 0 || length(var.config.denied_account_ids) == 0
+    error_message = "allowed_account_ids and denied_account_ids are mutually exclusive"
+  }
+
+  validation {
+    condition     = length(var.config.allowed_regions) == 0 || length(var.config.denied_regions) == 0
+    error_message = "allowed_regions and denied_regions are mutually exclusive"
   }
 }
 

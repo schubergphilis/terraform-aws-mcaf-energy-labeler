@@ -10,7 +10,9 @@ locals {
     var.config,
     {
       allowed_account_ids     = length(var.config.allowed_account_ids) > 0 ? join(", ", var.config.allowed_account_ids) : null
+      allowed_regions         = length(var.config.allowed_regions) > 0 ? join(", ", var.config.allowed_regions) : null
       denied_account_ids      = length(var.config.denied_account_ids) > 0 ? join(", ", var.config.denied_account_ids) : null
+      denied_regions          = length(var.config.denied_regions) > 0 ? join(", ", var.config.denied_regions) : null
       disable_banner          = true
       disable_spinner         = true
       export_metrics_only     = true
