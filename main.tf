@@ -1,8 +1,8 @@
 locals {
   // Validate bucket and ECS cluster resources exist if specified, otherwise create them
-  bucket_name             = var.bucket_name != null ? var.bucket_name : module.s3[0].id
+  bucket_name             = var.create_bucket ? module.s3[0].id : var.bucket_name
   bucket_name_with_prefix = format("%s%s", local.bucket_name, var.bucket_prefix)
-  cluster_arn             = var.cluster_arn != null ? data.aws_ecs_cluster.selected[0].arn : aws_ecs_cluster.default[0].arn
+  cluster_arn             = var.create_cluster ? aws_ecs_cluster.default[0].arn : var.cluster_arn
   iam_name_prefix         = replace(title(var.name), "/[-_]/", "")
 
   // Sanitize the ECS task environment variables
@@ -41,15 +41,7 @@ locals {
   }
 }
 
-data "aws_ecs_cluster" "selected" {
-  count = var.cluster_arn != null ? 1 : 0
-
-  cluster_name = var.cluster_arn
-}
-
 data "aws_subnet" "selected" {
-  count = var.subnet_ids != null ? 1 : 0
-
   id = var.subnet_ids[0]
 }
 
@@ -57,12 +49,9 @@ data "aws_region" "current" {}
 
 resource "aws_security_group" "default" {
   # checkov:skip=CKV2_AWS_5: False positive finding, the security group is attached.
-
-  count = var.subnet_ids != null ? 1 : 0
-
   name        = var.name
   description = "Security group for ECS cluster ${var.name}"
-  vpc_id      = data.aws_subnet.selected[0].vpc_id
+  vpc_id      = data.aws_subnet.selected.vpc_id
   tags        = var.tags
 
   lifecycle {
@@ -80,12 +69,12 @@ resource "aws_vpc_security_group_egress_rule" "default" {
   ip_protocol                  = each.value.ip_protocol
   prefix_list_id               = each.value.prefix_list_id
   referenced_security_group_id = each.value.referenced_security_group_id
-  security_group_id            = aws_security_group.default[0].id
+  security_group_id            = aws_security_group.default.id
   to_port                      = each.value.to_port
 }
 
 resource "aws_ecs_cluster" "default" {
-  count = var.cluster_arn == null ? 1 : 0
+  count = var.create_cluster ? 1 : 0
 
   name = var.name
 }
@@ -174,17 +163,14 @@ resource "aws_cloudwatch_event_target" "default" {
     task_definition_arn = aws_ecs_task_definition.default.arn
     platform_version    = "1.4.0"
 
-    dynamic "network_configuration" {
-      for_each = var.subnet_ids != null ? { create : true } : {}
-
-      content {
+    network_configuration {
         assign_public_ip = false
-        security_groups  = [aws_security_group.default[0].id]
+        security_groups  = [aws_security_group.default.id]
         subnets          = var.subnet_ids
       }
     }
   }
-}
+
 
 module "aws_ecs_container_definition" {
   source  = "terraform-aws-modules/ecs/aws//modules/container-definition"
@@ -221,7 +207,7 @@ resource "aws_ecs_task_definition" "default" {
 }
 
 module "s3" {
-  count = var.bucket_name == null ? 1 : 0
+  count = var.create_bucket ? 1 : 0
 
   source  = "schubergphilis/mcaf-s3/aws"
   version = "~> 0.14.1"

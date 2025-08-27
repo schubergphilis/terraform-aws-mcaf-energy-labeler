@@ -1,11 +1,11 @@
 variable "bucket_name" {
   type        = string
   default     = null
-  description = "The name of the bucket to store the exported findings (will be created if not specified)"
+  description = "The name of the bucket to store the exported findings"
 
   validation {
-    condition     = !can(regex(".*\\/$", var.bucket_name))
-    error_message = "Bucket must not end with /"
+    condition     = var.create_bucket || var.bucket_name != null
+    error_message = "bucket_name must be specified when create_bucket = false"
   }
 }
 
@@ -29,7 +29,24 @@ variable "bucket_prefix" {
 variable "cluster_arn" {
   type        = string
   default     = null
-  description = "ARN of an existing ECS cluster, if left empty a new cluster will be created"
+  description = "ARN of an existing ECS cluster"
+
+    validation {
+    condition     = var.create_cluster || var.cluster_arn != null
+    error_message = "cluster_arn must be specified when create_cluster = false"
+  }
+}
+
+variable "create_bucket" {
+  type        = bool
+  default     = true
+  description = "Whether to create the S3 bucket"
+}
+
+variable "create_cluster" {
+  type        = bool
+  default     = true
+  description = "Whether to create the ECS cluster"
 }
 
 variable "config" {
@@ -136,8 +153,7 @@ variable "security_group_egress_rules" {
 
 variable "subnet_ids" {
   type        = list(string)
-  default     = null
-  description = "VPC subnet ids this lambda runs from"
+  description = "VPC subnets in which to run the labeler tasks"
 }
 
 variable "tags" {
