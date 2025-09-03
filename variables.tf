@@ -52,7 +52,8 @@ variable "config" {
 
 variable "kms_key_arn" {
   type        = string
-  description = "The ARN of the KMS key to use for encryption"
+  default     = null
+  description = "The ARN of the KMS key to use for encryption, if not provided a new KMS key will be created"
 }
 
 variable "iam_role_path" {
@@ -136,8 +137,7 @@ variable "security_group_egress_rules" {
 
 variable "subnet_ids" {
   type        = list(string)
-  default     = null
-  description = "VPC subnet ids this lambda runs from"
+  description = "VPC subnet ids where the labeler will be deployed"
 }
 
 variable "tags" {

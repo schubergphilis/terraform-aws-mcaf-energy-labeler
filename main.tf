@@ -48,8 +48,6 @@ data "aws_ecs_cluster" "selected" {
 }
 
 data "aws_subnet" "selected" {
-  count = var.subnet_ids != null ? 1 : 0
-
   id = var.subnet_ids[0]
 }
 
@@ -57,12 +55,9 @@ data "aws_region" "current" {}
 
 resource "aws_security_group" "default" {
   # checkov:skip=CKV2_AWS_5: False positive finding, the security group is attached.
-
-  count = var.subnet_ids != null ? 1 : 0
-
   name        = var.name
   description = "Security group for ECS cluster ${var.name}"
-  vpc_id      = data.aws_subnet.selected[0].vpc_id
+  vpc_id      = data.aws_subnet.selected.vpc_id
   tags        = var.tags
 
   lifecycle {
@@ -174,17 +169,13 @@ resource "aws_cloudwatch_event_target" "default" {
     task_definition_arn = aws_ecs_task_definition.default.arn
     platform_version    = "1.4.0"
 
-    dynamic "network_configuration" {
-      for_each = var.subnet_ids != null ? { create : true } : {}
-
-      content {
+    network_configuration {
         assign_public_ip = false
-        security_groups  = [aws_security_group.default[0].id]
+        security_groups  = [aws_security_group.default.id]
         subnets          = var.subnet_ids
       }
     }
   }
-}
 
 module "aws_ecs_container_definition" {
   source  = "terraform-aws-modules/ecs/aws//modules/container-definition"
