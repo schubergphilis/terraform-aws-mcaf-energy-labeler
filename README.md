@@ -1,5 +1,11 @@
 # terraform-aws-mcaf-energy-labeler
 
+```markdown
+## ⚠️ Caution: Resource Creation in the same Run
+
+If you create the KMS Key, ECS Cluster, or S3 bucket in the same Terraform run or workspace as this module, you may encounter errors such as `cannot compute count value`. To avoid this, create these resources in a separate run or ensure they exist before applying this module.
+```
+
 Terraform module to create an ECS scheduled task that periodically generates an AWS energy label based on [awsenergylabelerlib](https://github.com/schubergphilis/awsenergylabelerlib).
 
 This module should be run in the AWS account that collects your aggregated Security Hub findings. In a typical Control Tower deployment, this would be the Audit account.

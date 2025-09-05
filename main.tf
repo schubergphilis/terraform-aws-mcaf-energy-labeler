@@ -78,7 +78,9 @@ data "aws_iam_policy_document" "ecs_task" {
   # checkov:skip=CKV_AWS_356: Cannot set limit resources for security hub or org
 
   statement {
-    sid = "AllowReadOrg"
+    sid       = "AllowReadOrg"
+    resources = ["*"]
+
     actions = [
       "ec2:DescribeRegions",
       "iam:ListAccountAliases",
@@ -86,17 +88,17 @@ data "aws_iam_policy_document" "ecs_task" {
       "organizations:DescribeOrganization",
       "organizations:ListAccounts",
     ]
-    resources = ["*"]
   }
 
   statement {
-    sid = "AllowReadSecurityHub"
+    sid       = "AllowReadSecurityHub"
+    resources = ["*"]
+
     actions = [
       "securityhub:GetFindings",
       "securityhub:ListEnabledProductsForImport",
       "securityhub:ListFindingAggregators",
     ]
-    resources = ["*"]
   }
 
   statement {
@@ -106,14 +108,15 @@ data "aws_iam_policy_document" "ecs_task" {
   }
 
   statement {
-    sid = "AllowUseKMS"
+    sid       = "AllowUseKMS"
+    resources = [local.kms_key_arn]
+
     actions = [
       "kms:Decrypt",
       "kms:Encrypt",
       "kms:GenerateDataKey*",
       "kms:ReEncrypt*",
     ]
-    resources = ["arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/*"]
   }
 }
 
@@ -179,6 +182,8 @@ module "aws_ecs_container_definition" {
     }
     if value != null
   ]
+
+  depends_on = [aws_kms_key_policy.default]
 }
 
 resource "aws_ecs_task_definition" "default" {

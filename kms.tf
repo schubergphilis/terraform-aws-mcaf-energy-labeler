@@ -20,15 +20,16 @@ data "aws_iam_policy_document" "kms_key_policy" {
   }
 
   statement {
-    sid = "Read/List permissions for all IAM users"
+    sid       = "Read/List permissions for all IAM users"
+    effect    = "Allow"
+    resources = ["*"]
+
     actions = [
       "kms:Describe*",
       "kms:GetKeyPolicy",
       "kms:ListAliases",
       "kms:ListKeys"
     ]
-    effect    = "Allow"
-    resources = ["*"]
 
     principals {
       type = "AWS"
@@ -39,7 +40,10 @@ data "aws_iam_policy_document" "kms_key_policy" {
   }
 
   statement {
-    sid = "Administrative permissions"
+    sid       = "Administrative permissions"
+    effect    = "Allow"
+    resources = ["arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/*"]
+
     actions = [
       "kms:Create*",
       "kms:Describe*",
@@ -56,8 +60,6 @@ data "aws_iam_policy_document" "kms_key_policy" {
       "kms:UntagResource",
       "kms:Update*"
     ]
-    effect    = "Allow"
-    resources = ["arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/*"]
 
     principals {
       type        = "AWS"
@@ -66,7 +68,10 @@ data "aws_iam_policy_document" "kms_key_policy" {
   }
 
   statement {
-    sid = "Permissions for Cloudwatch log groups in this account"
+    sid       = "Permissions for Cloudwatch log group"
+    effect    = "Allow"
+    resources = ["arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/*"]
+
     actions = [
       "kms:Decrypt",
       "kms:Describe*",
@@ -74,8 +79,6 @@ data "aws_iam_policy_document" "kms_key_policy" {
       "kms:GenerateDataKey*",
       "kms:ReEncrypt*"
     ]
-    effect    = "Allow"
-    resources = ["arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/*"]
 
     principals {
       type        = "Service"
@@ -87,25 +90,26 @@ data "aws_iam_policy_document" "kms_key_policy" {
       variable = "kms:EncryptionContext:aws:logs:arn"
 
       values = [
-        "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+        "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/ecs/${var.name}"
       ]
     }
   }
 
   statement {
-    sid = "Permissions for energy labeler ECS task role"
+    sid       = "Permissions for energy labeler ECS task role"
+    effect    = "Allow"
+    resources = ["arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/*"]
+
     actions = [
       "kms:Decrypt",
       "kms:Encrypt",
       "kms:GenerateDataKey*",
       "kms:ReEncrypt*"
     ]
-    effect    = "Allow"
-    resources = ["arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/*"]
 
     principals {
       type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.iam_name_prefix}EcsTaskRole"]
+      identifiers = [module.iam_role["task"].arn]
     }
   }
 }
@@ -118,5 +122,11 @@ module "kms_key" {
 
   name        = var.name
   description = "KMS key used for encrypting all energy labeler resources"
-  policy      = data.aws_iam_policy_document.kms_key_policy.json
+}
+
+resource "aws_kms_key_policy" "default" {
+  count = var.kms_key_arn == null ? 1 : 0
+
+  key_id = module.kms_key[0].id
+  policy = data.aws_iam_policy_document.kms_key_policy.json
 }
