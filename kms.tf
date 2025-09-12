@@ -112,6 +112,21 @@ data "aws_iam_policy_document" "kms_key_policy" {
       identifiers = [module.iam_role["task"].arn]
     }
   }
+
+  statement {
+    sid       = "Permissions to Decrypt for specified IAM principals"
+    effect    = "Allow"
+    resources = ["arn:aws:kms:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:key/*"]
+
+    actions = [
+      "kms:Decrypt"
+    ]
+
+    principals {
+      type        = "AWS"
+      identifiers = var.kms_key_decrypt_iam_principals
+    }
+  }
 }
 
 module "kms_key" {
