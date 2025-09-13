@@ -131,6 +131,7 @@ module "aws-energy-labeler" {
 | <a name="input_iam_role_path"></a> [iam\_role\_path](#input\_iam\_role\_path) | The path for the IAM role | `string` | `"/"` | no |
 | <a name="input_image_uri"></a> [image\_uri](#input\_image\_uri) | The URI of the container image to use | `string` | `"ghcr.io/schubergphilis/awsenergylabeler:main"` | no |
 | <a name="input_kms_key_arn"></a> [kms\_key\_arn](#input\_kms\_key\_arn) | The ARN of the KMS key to use for encryption, if not provided a new KMS key will be created | `string` | `null` | no |
+| <a name="input_kms_key_decrypt_iam_principals"></a> [kms\_key\_decrypt\_iam\_principals](#input\_kms\_key\_decrypt\_iam\_principals) | List of IAM principal ARNs allowed to decrypt the KMS key. Required if kms\_key\_arn is not set. | `list(string)` | `null` | no |
 | <a name="input_memory"></a> [memory](#input\_memory) | The memory size of the task | `number` | `512` | no |
 | <a name="input_name"></a> [name](#input\_name) | Name prefix of labeler resources | `string` | `"aws-energy-labeler"` | no |
 | <a name="input_schedule_expression"></a> [schedule\_expression](#input\_schedule\_expression) | The cron expression to be used for triggering the labeler | `string` | `"cron(0 13 ? * SUN *)"` | no |
