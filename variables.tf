@@ -50,11 +50,6 @@ variable "config" {
   }
 }
 
-variable "kms_key_arn" {
-  type        = string
-  description = "The ARN of the KMS key to use for encryption"
-}
-
 variable "iam_role_path" {
   type        = string
   default     = "/"
@@ -71,6 +66,25 @@ variable "image_uri" {
   type        = string
   default     = "ghcr.io/schubergphilis/awsenergylabeler:main"
   description = "The URI of the container image to use"
+}
+
+variable "kms_key_arn" {
+  type        = string
+  default     = null
+  description = "The ARN of the KMS key to use for encryption, if not provided a new KMS key will be created"
+}
+
+variable "kms_key_decrypt_iam_principals" {
+  type        = list(string)
+  default     = null
+  description = "List of IAM principal ARNs allowed to decrypt the KMS key. Required if kms_key_arn is not set."
+
+  validation {
+    condition = (
+      var.kms_key_arn == null ? var.kms_key_decrypt_iam_principals != null && length(var.kms_key_decrypt_iam_principals) > 0 : true
+    )
+    error_message = "If kms_key_arn is not set, kms_key_decrypt_iam_principals must be defined and not empty."
+  }
 }
 
 variable "memory" {
@@ -136,8 +150,7 @@ variable "security_group_egress_rules" {
 
 variable "subnet_ids" {
   type        = list(string)
-  default     = null
-  description = "VPC subnet ids this lambda runs from"
+  description = "VPC subnet ids where the labeler will be deployed"
 }
 
 variable "tags" {

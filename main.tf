@@ -4,6 +4,7 @@ locals {
   bucket_name_with_prefix = format("%s%s", local.bucket_name, var.bucket_prefix)
   cluster_arn             = var.cluster_arn != null ? data.aws_ecs_cluster.selected[0].arn : aws_ecs_cluster.default[0].arn
   iam_name_prefix         = replace(title(var.name), "/[-_]/", "")
+  kms_key_arn             = var.kms_key_arn != null ? var.kms_key_arn : module.kms_key[0].arn
 
   // Sanitize the ECS task environment variables
   config = merge(
@@ -41,28 +42,11 @@ locals {
   }
 }
 
-data "aws_ecs_cluster" "selected" {
-  count = var.cluster_arn != null ? 1 : 0
-
-  cluster_name = var.cluster_arn
-}
-
-data "aws_subnet" "selected" {
-  count = var.subnet_ids != null ? 1 : 0
-
-  id = var.subnet_ids[0]
-}
-
-data "aws_region" "current" {}
-
 resource "aws_security_group" "default" {
   # checkov:skip=CKV2_AWS_5: False positive finding, the security group is attached.
-
-  count = var.subnet_ids != null ? 1 : 0
-
   name        = var.name
   description = "Security group for ECS cluster ${var.name}"
-  vpc_id      = data.aws_subnet.selected[0].vpc_id
+  vpc_id      = data.aws_subnet.selected.vpc_id
   tags        = var.tags
 
   lifecycle {
@@ -80,7 +64,7 @@ resource "aws_vpc_security_group_egress_rule" "default" {
   ip_protocol                  = each.value.ip_protocol
   prefix_list_id               = each.value.prefix_list_id
   referenced_security_group_id = each.value.referenced_security_group_id
-  security_group_id            = aws_security_group.default[0].id
+  security_group_id            = aws_security_group.default.id
   to_port                      = each.value.to_port
 }
 
@@ -123,20 +107,16 @@ data "aws_iam_policy_document" "ecs_task" {
     resources = ["arn:aws:s3:::${local.bucket_name_with_prefix}*"]
   }
 
-  dynamic "statement" {
-    for_each = var.kms_key_arn != null ? { create = true } : {}
+  statement {
+    sid       = "AllowUseKMS"
+    resources = [local.kms_key_arn]
 
-    content {
-      sid       = "AllowUseKMS"
-      resources = [var.kms_key_arn]
-
-      actions = [
-        "kms:Decrypt",
-        "kms:Encrypt",
-        "kms:GenerateDataKey*",
-        "kms:ReEncrypt*",
-      ]
-    }
+    actions = [
+      "kms:Decrypt",
+      "kms:Encrypt",
+      "kms:GenerateDataKey*",
+      "kms:ReEncrypt*",
+    ]
   }
 }
 
@@ -174,14 +154,10 @@ resource "aws_cloudwatch_event_target" "default" {
     task_definition_arn = aws_ecs_task_definition.default.arn
     platform_version    = "1.4.0"
 
-    dynamic "network_configuration" {
-      for_each = var.subnet_ids != null ? { create : true } : {}
-
-      content {
-        assign_public_ip = false
-        security_groups  = [aws_security_group.default[0].id]
-        subnets          = var.subnet_ids
-      }
+    network_configuration {
+      assign_public_ip = false
+      security_groups  = [aws_security_group.default.id]
+      subnets          = var.subnet_ids
     }
   }
 }
@@ -193,7 +169,7 @@ module "aws_ecs_container_definition" {
   name                            = var.name
   cloudwatch_log_group_name       = "/aws/ecs/${var.name}"
   create_cloudwatch_log_group     = true
-  cloudwatch_log_group_kms_key_id = var.kms_key_arn
+  cloudwatch_log_group_kms_key_id = local.kms_key_arn
   essential                       = true
   image                           = var.image_uri
   readonly_root_filesystem        = true
@@ -206,6 +182,8 @@ module "aws_ecs_container_definition" {
     }
     if value != null
   ]
+
+  depends_on = [aws_kms_key_policy.default]
 }
 
 resource "aws_ecs_task_definition" "default" {
@@ -227,7 +205,7 @@ module "s3" {
   version = "~> 0.14.1"
 
   name_prefix = "${lower(var.name)}-"
-  kms_key_arn = var.kms_key_arn
+  kms_key_arn = local.kms_key_arn
   versioning  = true
   tags        = var.tags
 
