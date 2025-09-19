@@ -142,6 +142,9 @@ module "aws-energy-labeler" {
 
 | Name | Description |
 |------|-------------|
+| <a name="output_ecs_cluster_arn"></a> [ecs\_cluster\_arn](#output\_ecs\_cluster\_arn) | value of the ecs cluster arn |
+| <a name="output_s3_bucket_arn"></a> [s3\_bucket\_arn](#output\_s3\_bucket\_arn) | value of the s3 bucket arn |
+| <a name="output_s3_bucket_name"></a> [s3\_bucket\_name](#output\_s3\_bucket\_name) | value of the s3 bucket name |
 | <a name="output_task_role_arn"></a> [task\_role\_arn](#output\_task\_role\_arn) | value of the task role arn |
 <!-- END_TF_DOCS -->
 
