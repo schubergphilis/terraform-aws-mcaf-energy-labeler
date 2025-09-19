@@ -1,5 +1,6 @@
 locals {
   // Validate bucket and ECS cluster resources exist if specified, otherwise create them
+  bucket_arn              = var.bucket_name != null ? "arn:aws:s3:::${var.bucket_name}" : module.s3[0].arn
   bucket_name             = var.bucket_name != null ? var.bucket_name : module.s3[0].id
   bucket_name_with_prefix = format("%s%s", local.bucket_name, var.bucket_prefix)
   cluster_arn             = var.cluster_arn != null ? data.aws_ecs_cluster.selected[0].arn : aws_ecs_cluster.default[0].arn
